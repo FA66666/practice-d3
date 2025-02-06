@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>基于排名的堆叠面积图</title>
+    <title>各国历年GDP及排名变化</title>
     <script type="text/javascript" src="../d3.js"></script>
     <style type="text/css">
         h1 {
@@ -50,7 +50,7 @@
             var row = { year: parseTime(d.year) };
             for (var key in d) {
                 if (key !== "year") {
-                    row[key] = d[key] ? +d[key] : 0;
+                    row[key] = d[key] ? +d[key] : 0;        //字段转换为数字
                 }
             }
             return row;
@@ -147,8 +147,29 @@
                     return area(seriesByCountry[country]);
                 })
                 .attr("fill", function (d, i) {
-                    // 采用 d3.schemeCategory10 配色方案
-                    return d3.schemeCategory10[i % 10];
+                    return d3.schemeCategory10[i % 10]; // 采用 D3 默认配色
+                })
+                .attr("opacity", 0.9) // 默认透明度
+                .on("mouseover", function (event, country) {
+                    // 鼠标悬停时：
+                    svg.selectAll(".area")
+                        .transition().duration(200) // 200ms 动画
+                        .attr("fill", "lightgray")  // 变灰
+                        .attr("opacity", 0.5);      // 提高透明度
+
+                    d3.select(this)
+                        .transition().duration(200)
+                        .attr("fill", "red")        // 目标国家变红
+                        .attr("opacity", 1);        // 变得更明显
+                })
+                .on("mouseout", function () {
+                    // 鼠标离开时恢复原始颜色
+                    svg.selectAll(".area")
+                        .transition().duration(200)
+                        .attr("fill", function (d, i) {
+                            return d3.schemeCategory10[i % 10];
+                        })
+                        .attr("opacity", 0.9);
                 })
                 .append("title")
                 .text(function (d) { return d; });
@@ -162,9 +183,47 @@
             // 添加 Y 轴（右侧，向左平移一定距离）
             svg.append("g")
                 .attr("class", "axis")
-                .attr("transform", "translate(" + (w - padding * 2) + ",0)")
+                .attr("transform", "translate(" + (padding) + ",0)")
                 .call(yAxis);
+
+            // 额外增加底部空间，确保 X 轴和图例不会重叠
+            var paddingBottom = 50;
+            var newHeight = h + paddingBottom; // 让画布变大，给图例留出空间
+            svg.attr("height", newHeight);
+
+            // 计算 2016 年 GDP 排名前 12 名的国家
+            var latestYearData = dataset[dataset.length - 1]; // 取最后一年（2016）
+            var ranking2016 = keys.slice().sort((a, b) => latestYearData[b] - latestYearData[a]).slice(0, 12); // 取前 12 名
+
+            // 图例的高度和间距
+            var legendHeight = 20;
+            var legendPadding = 5;
+            var legendWidth = (w - 2 * padding) / ranking2016.length; // 让图例均匀分布
+
+            // **调整图例位置到 X 轴下方**
+            var legend = svg.append("g")
+                .attr("class", "legend")
+                .attr("transform", "translate(" + padding + "," + (h + 10) + ")"); // **向下移动 10px，避免遮挡**
+
+            // 添加标注
+            svg.selectAll(".label")
+                .data(ranking2016)
+                .enter()
+                .append("text")
+                .attr("class", "label")
+                .attr("x", w - padding * 2 + 5) // 右侧对齐
+                .attr("y", function (d) {
+                    var lastDataPoint = seriesByCountry[d][seriesByCountry[d].length - 1]; // 取 2016 年的数据
+                    return yScale(lastDataPoint.y1 - lastDataPoint.value / 2); // 计算中间位置
+                })
+                .text(function (d) { return d; }) // 显示国家名称
+                .attr("font-size", "12px")
+                .attr("fill", "black")
+                .attr("alignment-baseline", "middle");
+
         });
+
+
     </script>
 </body>
 
