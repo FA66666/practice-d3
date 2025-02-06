@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基于排名的堆叠面积图</title>
+    <script type="text/javascript" src="../d3.js"></script>
+    <style type="text/css">
+        h1 {
+            font-family: Helvetica, sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .area {
+            stroke: none;
+            opacity: 0.9;
+        }
+
+        .area:hover {
+            opacity: 1;
+            fill: red;
+        }
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #000;
+            shape-rendering: crispEdges;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>各国历年GDP及排名变化</h1>
+    <script type="text/javascript">
+        // 定义画布尺寸和边距
+        var w = 1400;
+        var h = 700;
+        var padding = 20;
+
+        // 定义时间解析和格式化函数
+        var parseTime = d3.timeParse("%Y");
+        var formatTime = d3.timeFormat("%Y");
+
+        // rowConverter：将 year 转换为 Date 类型，其它字段转换为数字
+        var rowConverter = function (d) {
+            var row = { year: parseTime(d.year) };
+            for (var key in d) {
+                if (key !== "year") {
+                    row[key] = d[key] ? +d[key] : 0;
+                }
+            }
+            return row;
+        };
+
+        // 加载 CSV 数据（请根据实际路径调整文件名）
+        d3.csv("gdp_data_source.csv", rowConverter, function (dataset) {
+            // 提取所有国家名称（去除 year 列）
+            var keys = dataset.columns.slice(1);
+
+            // 计算所有年份的总GDP最大值，用于 yScale 的 domain
+            var maxTotal = d3.max(dataset, function (d) {
+                var total = 0;
+                keys.forEach(function (k) {
+                    total += d[k];
+                });
+                return total;
+            });
+
+            // 构造每个国家的数据序列，每个数据点记录当年的 GDP、y0 和 y1（基于当年排名计算）
+            var seriesByCountry = {};
+            keys.forEach(function (country) {
+                seriesByCountry[country] = [];
+            });
+
+            // 遍历每一年的数据，根据该年各国GDP计算动态排名
+            dataset.forEach(function (d) {
+                // 按照当年 GDP 降序排序（生成新的数组，不改变原 keys 顺序）
+                var ranking = keys.slice().sort(function (a, b) {
+                    return d[a] - d[b];
+                });
+                // 累计计算：从 0 开始依次叠加每个国家的 GDP
+                var cumulative = 0;
+                ranking.forEach(function (country) {
+                    var value = d[country];
+                    seriesByCountry[country].push({
+                        year: d.year,
+                        value: value,
+                        y0: cumulative,
+                        y1: cumulative + value
+                    });
+                    cumulative += value;
+                });
+            });
+
+            // 为保证数据最大的国家显示在最上层，
+            // 计算每个国家的总体 GDP 累计值，然后排序：
+            var countries = Object.keys(seriesByCountry);
+            countries.sort(function (a, b) {
+                var totalA = d3.sum(seriesByCountry[a], function (d) { return d.value; });
+                var totalB = d3.sum(seriesByCountry[b], function (d) { return d.value; });
+                // 按从小到大排序，较小的先绘制，较大的后绘制，从而在图层上位于上层
+                return totalA - totalB;
+            });
+
+            // 定义比例尺
+            var xScale = d3.scaleTime()
+                .domain(d3.extent(dataset, function (d) { return d.year; }))
+                .range([padding, w - padding * 2]);
+
+            var yScale = d3.scaleLinear()
+                .domain([0, maxTotal])
+                .range([h - padding, padding / 2])
+                .nice();
+
+            // 定义坐标轴
+            var xAxis = d3.axisBottom(xScale)
+                .ticks(10)
+                .tickFormat(formatTime);
+
+            var yAxis = d3.axisRight(yScale)
+                .ticks(5);
+
+            // 创建 SVG 画布
+            var svg = d3.select("body")
+                .append("svg")
+                .attr("width", w)
+                .attr("height", h);
+
+            // 定义 area 生成器，使用动态计算的 y0 和 y1 绘制路径
+            var area = d3.area()
+                .x(function (d) { return xScale(d.year); })
+                .y0(function (d) { return yScale(d.y0); })
+                .y1(function (d) { return yScale(d.y1); });
+
+            // 绘制每个国家的面积图，按照计算后的 countries 顺序绘制，
+            // 这样总体 GDP 较小的国家先绘制，较大的国家后绘制（显示在上层）
+            svg.selectAll(".area")
+                .data(countries)
+                .enter()
+                .append("path")
+                .attr("class", "area")
+                .attr("d", function (country) {
+                    return area(seriesByCountry[country]);
+                })
+                .attr("fill", function (d, i) {
+                    // 采用 d3.schemeCategory10 配色方案
+                    return d3.schemeCategory10[i % 10];
+                })
+                .append("title")
+                .text(function (d) { return d; });
+
+            // 添加 X 轴（底部）
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(0," + (h - padding) + ")")
+                .call(xAxis);
+
+            // 添加 Y 轴（右侧，向左平移一定距离）
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(" + (w - padding * 2) + ",0)")
+                .call(yAxis);
+        });
+    </script>
+</body>
+
+</html>
