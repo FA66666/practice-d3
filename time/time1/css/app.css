@@ -1,0 +1,70 @@
+body {
+    font-family: Helvetica, sans-serif;
+}
+
+h1 {
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* 顶部说明区域样式 */
+#currentCountry {
+    text-align: center;
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+.area {
+    stroke: none;
+    opacity: 0.9;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+/* 返回按钮样式 */
+#returnBtn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 5px 10px;
+    font-size: 14px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+    outline: none;
+}
+
+#returnBtn:hover {
+    background-color: #f0f0f0;
+}
+
+/* 自定义 tooltip 样式 */
+.tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    pointer-events: none;
+    font-size: 18px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+/* 图例文字样式 */
+.legend text {
+    font-family: Helvetica, sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    fill: #333;
+}
