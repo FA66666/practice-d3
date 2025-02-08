@@ -265,7 +265,6 @@ d3.csv("gdp_data_source.csv", rowConverter, function (error, dataset) {
     .attr("width", legendWidth - legendPadding)
     .attr("height", legendHeight)
     .attr("xlink:href", function (d) {
-      // 请确保 "flags" 文件夹中存在对应国家名称的小写 png 文件，如 "usa.png"
       return "flags/" + d + ".png";
     })
     .on("mouseover", function (country) {
